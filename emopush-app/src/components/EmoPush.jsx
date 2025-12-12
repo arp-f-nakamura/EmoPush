@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { getTodayCount, updateCount } from '../services/gasApi';
+import React, { useState, useEffect } from "react";
+import { getTodayCount, updateCount } from "../services/gasApi";
 
 const EmoPush = () => {
   const [counts, setCounts] = useState({
@@ -8,19 +8,19 @@ const EmoPush = () => {
     fire: 0,
     scream: 0,
     coffee: 0,
-    clown: 0
+    clown: 0,
   });
   const [activeEmoji, setActiveEmoji] = useState(null);
   const [particles, setParticles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const emojis = [
-    { id: 'happy', emoji: '🌼', color: 'from-yellow-300 to-yellow-500' },
-    { id: 'done', emoji: '🙌', color: 'from-green-400 to-emerald-500' },
-    { id: 'fire', emoji: '🔥', color: 'from-orange-400 to-red-500' },
-    { id: 'scream', emoji: '😱', color: 'from-purple-400 to-pink-500' },
-    { id: 'coffee', emoji: '☕️', color: 'from-amber-600 to-amber-800' },
-    { id: 'clown', emoji: '🤡', color: 'from-red-400 to-pink-600' }
+    { id: "happy", emoji: "🌼", color: "yellow" },
+    { id: "done", emoji: "🙌", color: "green" },
+    { id: "fire", emoji: "🔥", color: "orange" },
+    { id: "scream", emoji: "😱", color: "purple" },
+    { id: "coffee", emoji: "☕️", color: "amber" },
+    { id: "clown", emoji: "🤡", color: "pink" },
   ];
 
   // 初回ロード時にGASからデータを取得
@@ -29,9 +29,8 @@ const EmoPush = () => {
       setLoading(true);
       const data = await getTodayCount();
       if (data && data.emojis && Array.isArray(data.emojis)) {
-        // バックエンドから返ってきた配列をcountsオブジェクトに変換
         const newCounts = {};
-        data.emojis.forEach(item => {
+        data.emojis.forEach((item) => {
           newCounts[item.id] = item.count;
         });
         setCounts(newCounts);
@@ -41,33 +40,47 @@ const EmoPush = () => {
     fetchData();
   }, []);
 
-  // カウント数に応じた相対的なスケール計算
   const getScale = (count) => {
     const maxCount = Math.max(...Object.values(counts), 1);
     const minScale = 0.7;
     const maxScale = 1.3;
     const ratio = count / maxCount;
-    return minScale + (ratio * (maxScale - minScale));
+    return minScale + ratio * (maxScale - minScale);
+  };
+
+  const getGradientStyle = (color) => {
+    const gradients = {
+      yellow:
+        "linear-gradient(to bottom right, rgb(253 224 71), rgb(234 179 8))",
+      green:
+        "linear-gradient(to bottom right, rgb(74 222 128), rgb(34 197 94))",
+      orange:
+        "linear-gradient(to bottom right, rgb(251 146 60), rgb(239 68 68))",
+      purple:
+        "linear-gradient(to bottom right, rgb(192 132 252), rgb(236 72 153))",
+      amber: "linear-gradient(to bottom right, rgb(217 119 6), rgb(146 64 14))",
+      pink: "linear-gradient(to bottom right, rgb(248 113 113), rgb(236 72 153))",
+    };
+    return gradients[color] || gradients.yellow;
   };
 
   const handleEmojiClick = async (emojiId, emoji, event) => {
-    // UIを即座に更新
-    setCounts(prev => ({
+    setCounts((prev) => ({
       ...prev,
-      [emojiId]: prev[emojiId] + 1
+      [emojiId]: prev[emojiId] + 1,
     }));
 
     setActiveEmoji(emojiId);
     setTimeout(() => setActiveEmoji(null), 300);
 
-    // クリックされたボタンの位置を取得
     const button = event.currentTarget;
     const rect = button.getBoundingClientRect();
-    const containerRect = button.closest('.bg-white').getBoundingClientRect();
+    const containerRect = button
+      .closest(".card-container")
+      .getBoundingClientRect();
     const centerX = rect.left - containerRect.left + rect.width / 2;
     const centerY = rect.top - containerRect.top + rect.height / 2;
 
-    // パーティクルエフェクト（パーンと弾ける）
     const newParticles = Array.from({ length: 16 }, (_, i) => ({
       id: Date.now() + i,
       emoji: emoji,
@@ -76,42 +89,68 @@ const EmoPush = () => {
       rotation: Math.random() * 1080 - 540,
       startX: centerX,
       startY: centerY,
-      delay: Math.random() * 0.1
+      delay: Math.random() * 0.1,
     }));
-    setParticles(prev => [...prev, ...newParticles]);
+    setParticles((prev) => [...prev, ...newParticles]);
     setTimeout(() => {
-      setParticles(prev => prev.filter(p => !newParticles.find(np => np.id === p.id)));
+      setParticles((prev) =>
+        prev.filter((p) => !newParticles.find((np) => np.id === p.id))
+      );
     }, 1000);
 
-    // GASにデータを送信（バックグラウンドで）
     const result = await updateCount(emojiId);
     if (result && result.emojis && Array.isArray(result.emojis)) {
-      // サーバーから返ってきた配列を正確なデータに変換して更新
       const newCounts = {};
-      result.emojis.forEach(item => {
+      result.emojis.forEach((item) => {
         newCounts[item.id] = item.count;
       });
       setCounts(newCounts);
     }
   };
 
-  // 今日の日付を英語形式で取得
   const getTodayDate = () => {
     const today = new Date();
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return today.toLocaleDateString('en-US', options);
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return today.toLocaleDateString("en-US", options);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
-        <div className="text-2xl font-semibold text-purple-600">Loading...</div>
+      <div
+        style={{
+          minHeight: "100vh",
+          background:
+            "linear-gradient(to bottom right, rgb(224 231 255), rgb(243 232 255), rgb(252 231 243))",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "1.5rem",
+            fontWeight: 600,
+            color: "rgb(147 51 234)",
+          }}
+        >
+          Loading...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-8">
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(to bottom right, rgb(224 231 255), rgb(243 232 255), rgb(252 231 243))",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "2rem",
+      }}
+    >
       <style>{`
         @keyframes particle-burst {
           0% {
@@ -127,35 +166,100 @@ const EmoPush = () => {
             opacity: 0;
           }
         }
+        .button-hover:hover {
+          transform: scale(1.1);
+          box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+        }
+        .button-active:active {
+          transform: scale(0.95);
+        }
       `}</style>
-      <div className="max-w-2xl w-full">
+      <div style={{ maxWidth: "42rem", width: "100%" }}>
         {/* ヘッダー */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
+        <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+          <h1
+            style={{
+              fontSize: "3rem",
+              fontWeight: "bold",
+              background:
+                "linear-gradient(to right, rgb(147 51 234), rgb(219 39 119))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              marginBottom: "0.75rem",
+            }}
+          >
             EmoPush
           </h1>
         </div>
 
         {/* メインカード */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 backdrop-blur-lg bg-opacity-90 relative">
+        <div
+          className="card-container"
+          style={{
+            background: "rgba(255, 255, 255, 0.9)",
+            borderRadius: "1.5rem",
+            boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
+            padding: "2rem",
+            position: "relative",
+          }}
+        >
           {/* 背景の装飾 */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-200 to-pink-200 rounded-full blur-3xl opacity-30 -mr-16 -mt-16"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-blue-200 to-indigo-200 rounded-full blur-3xl opacity-30 -ml-16 -mb-16"></div>
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              width: "8rem",
+              height: "8rem",
+              background:
+                "linear-gradient(to bottom right, rgb(233 213 255), rgb(251 207 232))",
+              borderRadius: "50%",
+              filter: "blur(3rem)",
+              opacity: 0.3,
+              marginRight: "-4rem",
+              marginTop: "-4rem",
+            }}
+          ></div>
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              width: "8rem",
+              height: "8rem",
+              background:
+                "linear-gradient(to top right, rgb(191 219 254), rgb(224 231 255))",
+              borderRadius: "50%",
+              filter: "blur(3rem)",
+              opacity: 0.3,
+              marginLeft: "-4rem",
+              marginBottom: "-4rem",
+            }}
+          ></div>
 
-          {/* パーティクルコンテナ（ボタンの外に表示） */}
-          <div className="absolute inset-0 pointer-events-none z-20 overflow-visible">
-            {particles.map(particle => (
+          {/* パーティクルコンテナ */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              zIndex: 20,
+              overflow: "visible",
+            }}
+          >
+            {particles.map((particle) => (
               <span
                 key={particle.id}
-                className="absolute text-4xl"
                 style={{
+                  position: "absolute",
+                  fontSize: "2.25rem",
                   left: `${particle.startX}px`,
                   top: `${particle.startY}px`,
-                  animation: 'particle-burst 1s ease-out forwards',
+                  animation: "particle-burst 1s ease-out forwards",
                   animationDelay: `${particle.delay}s`,
-                  '--angle': `${particle.angle}deg`,
-                  '--distance': `${particle.distance}px`,
-                  '--rotation': `${particle.rotation}deg`
+                  "--angle": `${particle.angle}deg`,
+                  "--distance": `${particle.distance}px`,
+                  "--rotation": `${particle.rotation}deg`,
                 }}
               >
                 {particle.emoji}
@@ -164,26 +268,64 @@ const EmoPush = () => {
           </div>
 
           {/* 絵文字ボタングリッド */}
-          <div className="grid grid-cols-3 gap-4 mb-8 relative z-10">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "1rem",
+              marginBottom: "2rem",
+              position: "relative",
+              zIndex: 10,
+            }}
+          >
             {emojis.map((item) => {
               const scale = getScale(counts[item.id]);
               return (
                 <button
                   key={item.id}
                   onClick={(e) => handleEmojiClick(item.id, item.emoji, e)}
-                  className={`group relative bg-gradient-to-br ${item.color} rounded-2xl p-6 
-                    transform transition-all duration-300 hover:scale-110 hover:shadow-xl
-                    ${activeEmoji === item.id ? 'scale-95' : ''}
-                    active:scale-95`}
+                  className="button-hover button-active"
                   style={{
-                    transform: `scale(${scale})`
+                    position: "relative",
+                    background: getGradientStyle(item.color),
+                    borderRadius: "1rem",
+                    padding: "1.5rem",
+                    transform: `scale(${scale})`,
+                    transition: "all 0.3s",
+                    border: "none",
+                    cursor: "pointer",
+                    ...(activeEmoji === item.id && {
+                      transform: `scale(${scale * 0.95})`,
+                    }),
                   }}
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="text-4xl transform group-hover:scale-110 transition-transform">
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "2.25rem",
+                        transition: "transform 0.3s",
+                      }}
+                    >
                       {item.emoji}
                     </div>
-                    <div className="bg-white bg-opacity-30 backdrop-blur-sm rounded-full px-3 py-1 text-white font-bold text-sm">
+                    <div
+                      style={{
+                        background: "rgba(255, 255, 255, 0.3)",
+                        backdropFilter: "blur(4px)",
+                        borderRadius: "9999px",
+                        padding: "0.25rem 0.75rem",
+                        color: "white",
+                        fontWeight: "bold",
+                        fontSize: "0.875rem",
+                      }}
+                    >
                       {counts[item.id]}
                     </div>
                   </div>
@@ -193,20 +335,66 @@ const EmoPush = () => {
           </div>
 
           {/* 統計情報 */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 relative z-10">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-gray-800">{getTodayDate()} EmoPush</h3>
+          <div
+            style={{
+              background:
+                "linear-gradient(to right, rgb(250 245 255), rgb(252 231 243))",
+              borderRadius: "1rem",
+              padding: "1.5rem",
+              position: "relative",
+              zIndex: 10,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: 600,
+                  color: "rgb(31 41 55)",
+                }}
+              >
+                {getTodayDate()} EmoPush
+              </h3>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "0.5rem",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "2.25rem",
+                  fontWeight: "bold",
+                  background:
+                    "linear-gradient(to right, rgb(147 51 234), rgb(219 39 119))",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
                 {Object.values(counts).reduce((a, b) => a + b, 0)}
               </span>
-              <span className="text-gray-600">pushes</span>
+              <span style={{ color: "rgb(75 85 99)" }}>pushes</span>
             </div>
           </div>
 
           {/* フッター */}
-          <div className="mt-6 text-center text-sm text-gray-400">
+          <div
+            style={{
+              marginTop: "1.5rem",
+              textAlign: "center",
+              fontSize: "0.875rem",
+              color: "rgb(156 163 175)",
+            }}
+          >
             毎日 0:00 にリセットされます
           </div>
         </div>
