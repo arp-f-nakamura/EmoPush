@@ -28,8 +28,13 @@ const EmoPush = () => {
     const fetchData = async () => {
       setLoading(true);
       const data = await getTodayCount();
-      if (data && data.counts) {
-        setCounts(data.counts);
+      if (data && data.emojis && Array.isArray(data.emojis)) {
+        // バックエンドから返ってきた配列をcountsオブジェクトに変換
+        const newCounts = {};
+        data.emojis.forEach(item => {
+          newCounts[item.id] = item.count;
+        });
+        setCounts(newCounts);
       }
       setLoading(false);
     };
@@ -80,9 +85,13 @@ const EmoPush = () => {
 
     // GASにデータを送信（バックグラウンドで）
     const result = await updateCount(emojiId);
-    if (result && result.counts) {
-      // サーバーから返ってきた正確なデータで更新
-      setCounts(result.counts);
+    if (result && result.emojis && Array.isArray(result.emojis)) {
+      // サーバーから返ってきた配列を正確なデータに変換して更新
+      const newCounts = {};
+      result.emojis.forEach(item => {
+        newCounts[item.id] = item.count;
+      });
+      setCounts(newCounts);
     }
   };
 
